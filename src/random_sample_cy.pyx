@@ -1,25 +1,15 @@
 # distutils: language = c++
 # cython: c_string_type=unicode, c_string_encoding=utf8
-from cython.operator cimport dereference as deref
 from libc.math cimport log2
 from libc.time cimport time, time_t, difftime
-from libcpp cimport nullptr
-from libcpp.map cimport map
 from libcpp.string cimport string
-from libcpp.vector cimport vector
-from libcpp.queue cimport queue
-from libcpp.memory cimport shared_ptr, make_shared
 
 import random
-import numpy as np
-from PIL import Image
 import torch
 from scipy.stats import entropy
 from tqdm import tqdm
-# import time as py_time
 
-from config import text_default_settings, image_default_settings, audio_default_settings
-from model import get_model, get_tokenizer, get_feature_extractor
+from config import text_default_settings
 from utils import get_probs_indices_past, set_seed, SingleExampleOutput
 
 ## Classes & Structures
@@ -135,10 +125,7 @@ def encode(model, context, message_bits, settings, bint verbose = False, string 
             total_capacity += capacity_t
             message_bits = message_bits[capacity_t:]  # remove the encoded part of `message_bits`
         generated_ids.append(sampled_index)
-        if settings.task == 'text':
-            prev = torch.tensor([sampled_index], device=settings.device).unsqueeze(0)
-        elif settings.task == 'image':
-            prev = torch.tensor([sampled_index], device=settings.device)
+        prev = torch.tensor([sampled_index], device=settings.device).unsqueeze(0)
     end = time(NULL)
     time_cost = difftime(end, start)
 
@@ -156,56 +143,6 @@ def encode_text(model, tokenizer, message_bits, context, settings = text_default
     single_encode_step_output = encode(model, context, message_bits, settings)
     single_encode_step_output.stego_object = tokenizer.decode(single_encode_step_output.generated_ids)
 
-    return single_encode_step_output
-
-def encode_image(model, feature_extractor, message_bits, settings = image_default_settings, bint verbose = False,
-                 string tqdm_desc = b'Enc ',
-                 double context_ratio = 0.0, original_img = None):
-    cdef:
-        int n_pixels_to_gen = 1024, n_pixels_context, n_px, width, height, width_after, height_after, height_context
-    # feature_extractor = get_feature_extractor(settings)
-    # model = get_model(settings)
-    clusters = feature_extractor.clusters  # with shape (512, 3)
-    n_px = feature_extractor.size  # 32
-
-    context = torch.tensor([model.config.vocab_size - 1], device=settings.device)  # initialize with SOS token
-    if context_ratio != 0.0:
-        if original_img is None:
-            raise ValueError('If you set `context_ratio`, please make sure that `original_img` is not None!')
-        elif type(original_img) == str:
-            img = Image.open(original_img)
-        else:
-            img = original_img
-        width, height = img.size
-
-        # resize if needed
-        if width != n_px:
-            width_after = n_px
-            height_after = round(width_after / width * height)
-            img = img.resize((width_after, height_after))
-            width, height = width_after, height_after
-
-        pixel_indices_lst = feature_extractor(img, return_tensors='pt')['input_ids'][0].to(settings.device)
-        height_context = round(n_px * context_ratio)
-        n_pixels_context = n_px * height_context
-        primers = pixel_indices_lst[:n_pixels_context]
-        context = torch.cat((context, primers), dim=-1)
-        n_pixels_to_gen -= len(primers)
-
-        output_pixel_ids = pixel_indices_lst.tolist()[:n_pixels_context]
-    else:
-        output_pixel_ids = []
-    settings.length = n_pixels_to_gen
-
-    single_encode_step_output = encode(model, context, message_bits, settings)
-    output_pixel_ids.extend(single_encode_step_output.generated_ids)
-
-    def pixel_ids_lst_to_pil_image(pixel_indices_lst):
-        pixel_indices_array = np.array(pixel_indices_lst)
-        img = Image.fromarray(
-            np.reshape(np.rint(127.5 * (clusters[pixel_indices_array] + 1.0)), [n_px, n_px, 3]).astype(np.uint8))
-        return img
-    single_encode_step_output.stego_object = pixel_ids_lst_to_pil_image(output_pixel_ids)
     return single_encode_step_output
 
 ## Python interface

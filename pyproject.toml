@@ -1,0 +1,24 @@
+[project]
+name = "discop"
+version = "0.1.0"
+description = "Discop UDP server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "nltk==3.9.1",
+    "transformers==4.49.0",
+    "scipy==1.15.2",
+    "pandas==2.2.3",
+    "numpy==2.2.3",
+    "tqdm==4.67.1",
+    "cython==3.0.12",
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    "torchaudio==2.6.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3.5"]
+
+[tool.pytest.ini_options]
+addopts = "-s"

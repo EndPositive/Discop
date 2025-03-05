@@ -2,8 +2,7 @@ import os
 import random
 import torch
 import torch.nn.functional as F
-from typing import List, Tuple
-from transformers import PreTrainedTokenizer, PreTrainedModel
+from transformers import PreTrainedModel
 
 from config import Settings
 
@@ -14,7 +13,6 @@ class SingleExampleOutput:
                  total_minimum_entropy):
         self.generated_ids = generated_ids
         self.stego_object = stego_object
-        self.algo = settings.algo
         self.temp = settings.temp
         self.top_p = settings.top_p
         self.n_bits = n_bits
@@ -104,27 +102,16 @@ def get_probs_indices_past(model: PreTrainedModel,
                            prev=None,
                            past=None,
                            settings: Settings = Settings(),
-                           gpt_filter: bool = True) -> Tuple:
+                           gpt_filter: bool = True) -> tuple:
     # first, get logits from the model
-    if settings.task == 'text':
-        if 'gpt2' in settings.model_name:
-            past = limit_past(past)
-            model_output = model(prev, past_key_values=past)
-            past = model_output.past_key_values
-            logits = model_output.logits[0, -1, :].to(settings.device)
-            if gpt_filter:
-                for ele in filter_out_indices_gpt.keys():
-                    logits[ele] = -1e10
-        elif settings.model_name == 'transfo-xl-wt103':
-            model_output = model(prev, mems=past)
-            past = model_output.mems
-            logits = model_output.logits[0, -1, :].to(settings.device)
-            logits[0] = -1e10  # <eos>
-            logits[24] = -1e10  # <unk>
-    elif settings.task == 'image':
+    if 'gpt2' in settings.model_name:
+        past = limit_past(past)
         model_output = model(prev, past_key_values=past)
         past = model_output.past_key_values
-        logits = model_output.logits[0, :].to(settings.device)
+        logits = model_output.logits[0, -1, :].to(settings.device)
+        if gpt_filter:
+            for ele in filter_out_indices_gpt.keys():
+                logits[ele] = -1e10
 
     logits, indices = logits.sort(descending=True)
     logits = logits.double()
