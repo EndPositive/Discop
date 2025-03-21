@@ -1,0 +1,26 @@
+[project]
+name = "discop"
+version = "0.1.0"
+description = "Discop UDP server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "cython==3.0.12",
+    "datasets==3.4.1",
+    "nltk==v3.9.1",
+    "numpy==2.2.4",
+    "pandas==2.2.3",
+    "scipy==1.15.2",
+    "torch==2.6.0",
+    "tqdm==4.67.1",
+    "wandb==0.19.8",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3.5"]
+
+[tool.pytest.ini_options]
+addopts = "-s"
+
+[tool.uv.workspace]
+members = ["src/subdomain_gpt/data/domain_char/openintel"]

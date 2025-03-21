@@ -9,11 +9,3 @@ setup(ext_modules=cythonize(os.path.join('src', 'stega_cy.pyx'),
                                 'wraparound': False,
                                 'language_level': 3
                             }))
-
-setup(ext_modules=cythonize(os.path.join('src', 'random_sample_cy.pyx'),
-                            annotate=False,
-                            compiler_directives={
-                                'boundscheck': False,
-                                'wraparound': False,
-                                'language_level': 3
-                            }))
